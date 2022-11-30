@@ -70,7 +70,7 @@ pub const DICTIONARY: [&str; 1024] = [
     "morsel", "most", "mouth", "mow", "much", "mud", "muffin", "mug", "mullet", "mumble", "muppet",
     "mural", "muzzle", "myriad", "myth", "nag", "nail", "name", "nanny", "nap", "nasty", "navy",
     "near", "need", "neon", "nephew", "nerve", "nest", "never", "newt", "nexus", "nibs", "niche",
-    "niece", "nifty", "nimbly", "nobody", "node", "noise", "nomad", "note", "noun", "nozzle",
+    "niece", "nifty", "nimbly", "nobody", "nod", "noise", "nomad", "note", "noun", "nozzle",
     "nuance", "nudged", "nugget", "null", "numb", "nun", "nurse", "nylon", "oak", "oar", "oasis",
     "object", "occur", "ocean", "odd", "off", "often", "okay", "older", "olive", "omega", "onion",
     "online", "onto", "onward", "ooze", "open", "opus", "orange", "orb", "orchid", "order",
