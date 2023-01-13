@@ -2,4 +2,8 @@
 *.swo
 
 target
+cargo-test-*
+
 Cargo.lock
+notes
+out.txt
