@@ -203,6 +203,7 @@ mod tests {
     // confirming that the new seed has its original value.
     fn verify_conversion(seed: Seed) {
         let phrase = seed_to_seed_phrase(seed);
+        valid_seed_phrase(&phrase).unwrap();
         let seed_conf = match seed_phrase_to_seed(&phrase) {
             Ok(s) => s,
             Err(e) => panic!("verify_conversion failed: {}\n\t{:?}", e, seed),
@@ -213,6 +214,54 @@ mod tests {
                 seed, seed_conf, phrase
             );
         }
+    }
+
+    #[test]
+    // Verify that each of these bad seeds results in an error.
+    fn check_unhappy_seeds() {
+        let good_seed = random_seed();
+        let good_phrase = seed_to_seed_phrase(good_seed);
+
+        // Explore a bad checksum.
+        let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
+        phrase_words[0] = DICTIONARY[0];
+        phrase_words[1] = DICTIONARY[1];
+        phrase_words[2] = DICTIONARY[2];
+        let bad_phrase = phrase_words.join(" ");
+        valid_seed_phrase(&bad_phrase).unwrap_err();
+
+        // Explore a malformed word.
+        let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
+        phrase_words[0] = "ab";
+        let bad_phrase = phrase_words.join(" ");
+        valid_seed_phrase(&bad_phrase).unwrap_err();
+
+        // Explore just a bad checksum.
+        let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
+        if phrase_words[14] == DICTIONARY[0] {
+            phrase_words[14] = DICTIONARY[1]
+        } else {
+            phrase_words[14] = DICTIONARY[0]
+        }
+        let bad_phrase = phrase_words.join(" ");
+        valid_seed_phrase(&bad_phrase).unwrap_err();
+
+        // Explore a missing word.
+        let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
+        phrase_words[0] = "abx";
+        let bad_phrase = phrase_words.join(" ");
+        valid_seed_phrase(&bad_phrase).unwrap_err();
+
+        // Explore adding an extra word.
+        let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
+        phrase_words.push(DICTIONARY[0]);
+        let bad_phrase = phrase_words.join(" ");
+        valid_seed_phrase(&bad_phrase).unwrap_err();
+
+        // Explore removing a word.
+        let phrase_words: Vec<&str> = good_phrase.split(" ").collect();
+        let bad_phrase = phrase_words[..14].join(" ");
+        valid_seed_phrase(&bad_phrase).unwrap_err();
     }
 
     #[test]
