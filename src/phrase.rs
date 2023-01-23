@@ -6,7 +6,7 @@
 //! seed implements functions for moving between a seed and a seed phrase. This blog post provides
 //! a full specification for the code presented here:
 //!
-//! https://blog.sia.tech/a-technical-breakdown-of-mysky-seeds-ba9964505978
+//! <https://blog.sia.tech/a-technical-breakdown-of-mysky-seeds-ba9964505978>
 
 use anyhow::{bail, Error, Result};
 use sha2::{Digest, Sha256};
