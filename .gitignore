@@ -3,6 +3,7 @@
 
 target
 cargo-test-*
+*.profraw
 
 Cargo.lock
 notes

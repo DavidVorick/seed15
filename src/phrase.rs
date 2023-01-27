@@ -73,7 +73,7 @@ pub fn seed_to_seed_phrase(seed: Seed) -> String {
 /// seed_phrase_to_seed converts a seed phrase to a Uint8Array
 pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
     // Break the phrase into its component words
-    let mut all_words: Vec<&str> = phrase.split(" ").collect();
+    let mut all_words: Vec<&str> = phrase.split(' ').collect();
     let expected_words = SEED_ENTROPY_WORDS + SEED_CHECKSUM_WORDS;
     if all_words.len() != expected_words {
         bail!(
@@ -109,7 +109,7 @@ pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
             }
             word_index += 1;
         }
-        if word_found == false {
+        if !word_found {
             bail!(
                 "word prefix '{}' is not in the seed dictionary",
                 all_words[i]
@@ -183,7 +183,7 @@ fn seed_to_checksum_words(seed: Seed) -> [&'static str; SEED_CHECKSUM_WORDS] {
     word2 &= 0xffff;
     word2 += (result[2] as usize) << 2;
     word2 >>= 6;
-    return [DICTIONARY[word1], DICTIONARY[word2]];
+    [DICTIONARY[word1], DICTIONARY[word2]]
 }
 
 /// valid_seed_phrase will return an error if the seed phrase is not valid.
