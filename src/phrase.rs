@@ -8,11 +8,11 @@
 //!
 //! <https://blog.sia.tech/a-technical-breakdown-of-mysky-seeds-ba9964505978>
 
+use crate::Seed;
 use anyhow::{bail, Error, Result};
+use dictionary_1024::{index_of_word, word_at_index, words_match};
 use sha2::{Digest, Sha256};
 
-use crate::dictionary::{DICTIONARY, DICTIONARY_UNIQUE_PREFIX};
-use crate::Seed;
 
 /// SEED_ENTROPY_WORDS describes the number of words in a seed phrase that contribute to its
 /// fundamental entropy. These are the first 13 words.
@@ -58,22 +58,22 @@ pub fn seed_to_seed_phrase(seed: Seed) -> String {
         if i != 0 {
             phrase += " ";
         }
-        phrase += DICTIONARY[word_index];
+        phrase += &word_at_index(word_index);
     }
 
     // Add the checksum words.
     let checksum_words = seed_to_checksum_words(seed);
     phrase += " ";
-    phrase += checksum_words[0];
+    phrase += &checksum_words[0];
     phrase += " ";
-    phrase += checksum_words[1];
+    phrase += &checksum_words[1];
     phrase
 }
 
 /// seed_phrase_to_seed converts a seed phrase to a Uint8Array
 pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
     // Break the phrase into its component words
-    let mut all_words: Vec<&str> = phrase.split(' ').collect();
+    let all_words: Vec<&str> = phrase.split(' ').collect();
     let expected_words = SEED_ENTROPY_WORDS + SEED_CHECKSUM_WORDS;
     if all_words.len() != expected_words {
         bail!(
@@ -83,38 +83,13 @@ pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
         );
     }
 
-    // Truncate each word into its minimal form. We only use the first few characters of the actual
-    // dictionary word, which gives users the flexibility to substitute words if they have words
-    // that are easier for them to remember.
-    for i in 0..all_words.len() {
-        if all_words[i].len() < DICTIONARY_UNIQUE_PREFIX {
-            bail!("each word must be at least three characters");
-        }
-        all_words[i] = &all_words[i][..DICTIONARY_UNIQUE_PREFIX];
-    }
-
     // Build the seed from the entropy words. We build the seed out one bit at a time. We convert
     // the word into a set of entropy bits, then iterate over the bits and add them to the seed.
     let mut seed: Seed = [0u8; 16];
     let mut current_byte = 0;
     let mut current_bit = 0;
     for i in 0..SEED_ENTROPY_WORDS {
-        // Get the index of the next seed word.
-        let mut word_found = false;
-        let mut word_index = 0;
-        for w in DICTIONARY {
-            if w[..DICTIONARY_UNIQUE_PREFIX] == *all_words[i] {
-                word_found = true;
-                break;
-            }
-            word_index += 1;
-        }
-        if !word_found {
-            bail!(
-                "word prefix '{}' is not in the seed dictionary",
-                all_words[i]
-            );
-        }
+        let word_index = index_of_word(all_words[i])?;
 
         // Pack the bits into the seed.
         let mut bits = 10;
@@ -123,7 +98,7 @@ pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
             if word_index > 255 {
                 bail!(
                     "seed phrase is not valid: {} cannot be the 13th word prefix",
-                    &DICTIONARY[word_index][..DICTIONARY_UNIQUE_PREFIX]
+                    &all_words[SEED_ENTROPY_WORDS - 1]
                 );
             }
         }
@@ -144,17 +119,15 @@ pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
     }
 
     // Verify the checksum on the seed.
-    let mut checksum_words = seed_to_checksum_words(seed);
-    checksum_words[0] = &checksum_words[0][..DICTIONARY_UNIQUE_PREFIX];
-    checksum_words[1] = &checksum_words[1][..DICTIONARY_UNIQUE_PREFIX];
-    if checksum_words[0] != all_words[SEED_ENTROPY_WORDS] {
+    let checksum_words = seed_to_checksum_words(seed);
+    if !words_match(&checksum_words[0], all_words[SEED_ENTROPY_WORDS]) {
         bail!(
             "first checksum word is incorrect, expecting prefix {} but got {}",
             checksum_words[0],
             all_words[SEED_ENTROPY_WORDS]
         );
     }
-    if checksum_words[1] != all_words[SEED_ENTROPY_WORDS + 1] {
+    if !words_match(&checksum_words[1], all_words[SEED_ENTROPY_WORDS + 1]) {
         bail!(
             "second checksum word is incorrect, expecting prefix {} but got {}",
             checksum_words[1],
@@ -167,7 +140,7 @@ pub fn seed_phrase_to_seed(phrase: &str) -> Result<Seed, Error> {
 }
 
 /// seed_to_checksum_words will provide the checksum words for a given seed.
-fn seed_to_checksum_words(seed: Seed) -> [&'static str; SEED_CHECKSUM_WORDS] {
+fn seed_to_checksum_words(seed: Seed) -> [String; SEED_CHECKSUM_WORDS] {
     // Hash the seed to get the checksum entropy.
     let mut hasher = Sha256::new();
     hasher.update(&seed);
@@ -183,7 +156,7 @@ fn seed_to_checksum_words(seed: Seed) -> [&'static str; SEED_CHECKSUM_WORDS] {
     word2 &= 0xffff;
     word2 += (result[2] as usize) << 2;
     word2 >>= 6;
-    [DICTIONARY[word1], DICTIONARY[word2]]
+    [word_at_index(word1), word_at_index(word2)]
 }
 
 /// valid_seed_phrase will return an error if the seed phrase is not valid.
@@ -203,6 +176,7 @@ mod tests {
     // confirming that the new seed has its original value.
     fn verify_conversion(seed: Seed) {
         let phrase = seed_to_seed_phrase(seed);
+        println!("{}", phrase);
         valid_seed_phrase(&phrase).unwrap();
         let seed_conf = match seed_phrase_to_seed(&phrase) {
             Ok(s) => s,
@@ -224,9 +198,12 @@ mod tests {
 
         // Explore a bad checksum.
         let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
-        phrase_words[0] = DICTIONARY[0];
-        phrase_words[1] = DICTIONARY[1];
-        phrase_words[2] = DICTIONARY[2];
+        let wai0 = word_at_index(0);
+        let wai1 = word_at_index(1);
+        let wai2 = word_at_index(2);
+        phrase_words[0] = &wai0;
+        phrase_words[1] = &wai1;
+        phrase_words[2] = &wai2;
         let bad_phrase = phrase_words.join(" ");
         valid_seed_phrase(&bad_phrase).unwrap_err();
 
@@ -238,10 +215,10 @@ mod tests {
 
         // Explore just a bad checksum.
         let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
-        if phrase_words[14] == DICTIONARY[0] {
-            phrase_words[14] = DICTIONARY[1]
+        if phrase_words[14] == word_at_index(0) {
+            phrase_words[14] = &wai1;
         } else {
-            phrase_words[14] = DICTIONARY[0]
+            phrase_words[14] = &wai0;
         }
         let bad_phrase = phrase_words.join(" ");
         valid_seed_phrase(&bad_phrase).unwrap_err();
@@ -254,7 +231,7 @@ mod tests {
 
         // Explore adding an extra word.
         let mut phrase_words: Vec<&str> = good_phrase.split(" ").collect();
-        phrase_words.push(DICTIONARY[0]);
+        phrase_words.push(&wai0);
         let bad_phrase = phrase_words.join(" ");
         valid_seed_phrase(&bad_phrase).unwrap_err();
 
@@ -283,7 +260,6 @@ mod tests {
         verify_conversion(seed);
         seed[5] = 2;
         verify_conversion(seed);
-        drop(seed);
 
         // Try with 1000 random seeds.
         for _ in 0..1000 {
@@ -300,23 +276,13 @@ mod tests {
             let mut words: Vec<&str> = phrase.split(" ").collect();
 
             // Find the index of the 13th word.
-            let mut word_found = false;
-            let mut word_index = 0;
-            for w in DICTIONARY {
-                if w == words[12] {
-                    word_found = true;
-                    break;
-                }
-                word_index += 1;
-            }
-            if word_found == false {
-                panic!("word '{}' not in dictionary", words[12]);
-            }
+            let word_index = index_of_word(words[12]).unwrap();
             if word_index > 255 {
                 panic!("seed generated randomly with 13th word out of bounds");
             }
             // Add the extra bit and check for a valid seed.
-            words[12] = &DICTIONARY[word_index + 256];
+            let wai = word_at_index(word_index + 256);
+            words[12] = &wai;
             let mut altered_phrase = words[0].to_string();
             for i in 1..words.len() {
                 altered_phrase += " ";

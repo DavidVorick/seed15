@@ -1,6 +1,6 @@
 [package]
 name = "seed15"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "general library for working with 15 word seed phrases"
 license = "MIT"
@@ -8,7 +8,8 @@ repository = "https://github.com/DavidVorick/seed15"
 
 [dependencies]
 anyhow = "1.0"
+dictionary-1024 = "0.3"
 ed25519-dalek = "1"
 rand_core = "0.5"
 sha2 = "0.10"
-userspace-rng = "0.1"
+userspace-rng = "1"

@@ -37,7 +37,6 @@
 //! A full specification of the seed protocol can be found here:
 //! https://blog.sia.tech/a-technical-breakdown-of-mysky-seeds-ba9964505978
 
-pub mod dictionary;
 pub mod keypair;
 pub mod phrase;
 
